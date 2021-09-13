@@ -14,12 +14,14 @@ import { usePreviewSubscription } from '../lib/sanity'
 import { Layout } from '@components'
 import getOpenGraphImages from '../common/helpers/getOpenGraphImages'
 import { mapLocaleToLang } from '../lib/localization'
-import { Menu } from '../tempcomponents/shared/Menu'
+import { Menu } from '../pageComponents/shared/menu/Menu'
 import { useAppInsightsContext } from '@microsoft/applicationinsights-react-js'
+import { getPageData } from '../common/helpers/staticPageHelpers'
 
-const HomePage = dynamic(() => import('../tempcomponents/pageTemplates/Home'))
-const TopicPage = dynamic(() => import('../tempcomponents/pageTemplates/TopicPage'))
-const OldTopicPage = dynamic(() => import('../tempcomponents/pageTemplates/OldTopicPage'))
+// const HomePage = dynamic(() => import('../tempcomponents/pageTemplates/Home'))
+const TopicPage = dynamic(() => import('../pageComponents/pageTemplates/TopicPage'))
+const OldTopicPage = dynamic(() => import('../pageComponents/pageTemplates/OldTopicPage'))
+
 const { publicRuntimeConfig } = getConfig()
 
 export default function Page({ data, preview }: any) {
@@ -33,11 +35,6 @@ export default function Page({ data, preview }: any) {
     enabled: preview || router.query.preview !== null,
   })
 
-  // console.log(data?.docType)
-  if (data?.docType === 'home') {
-    return <HomePage />
-  }
-
   if (!router.isFallback && !slug && !data?.queryParams?.id) {
     return <ErrorPage statusCode={404} />
   }
@@ -46,6 +43,25 @@ export default function Page({ data, preview }: any) {
   const fullUrl = fullUrlDyn.replace('/[[...slug]]', slug)
 
   appInsights.trackPageView({ name: slug, uri: fullUrl })
+
+  if (data?.isArchivedFallback) {
+    if (!data.pageData.content) {
+      return <ErrorPage statusCode={404} />
+    }
+
+    return (
+      <>
+        {router.isFallback ? (
+          <p>Loading…</p>
+        ) : (
+          <>
+            <NextSeo title={data.pageData?.title} description={data.pageData?.description}></NextSeo>
+            <OldTopicPage data={data.pageData} />
+          </>
+        )}
+      </>
+    )
+  }
 
   return (
     <>
@@ -71,7 +87,7 @@ export default function Page({ data, preview }: any) {
             }}
           ></NextSeo>
 
-          {data?.docType === 'page' && <TopicPage data={pageData} />}
+          <TopicPage data={pageData} />
         </>
       )}
     </>
@@ -106,26 +122,42 @@ Page.getLayout = (page: AppProps) => {
 }
 
 export const getStaticProps: GetStaticProps = async ({ params, preview = false, locale = 'en' }) => {
-  const { query, queryParams, docType } = getQueryFromSlug(params?.slug as string[], locale)
-
+  const { query, queryParams } = getQueryFromSlug(params?.slug as string[], locale)
+  // console.log('params', params)
   const pageData = query && (await getClient(preview).fetch(query, queryParams))
   // Let's do it simple stupid and iterate later on
   const menuData = await getClient(preview).fetch(menuQuery, { lang: mapLocaleToLang(locale) })
 
+  if (!pageData) {
+    const slug = params?.slug ? (params?.slug as string[]).join('/') : '/'
+    const archivedData = await getPageData(locale, slug)
+
+    return {
+      props: {
+        preview: false,
+        data: {
+          isArchivedFallback: true,
+          pageData: { slug: slug, ...archivedData },
+          menuData,
+        },
+      },
+      revalidate: 1,
+    }
+  }
+
   // console.log('Menu data', menuData)
   // console.log('query:', query)
   // console.log('queryParams:', queryParams)
-  // console.log('docType:', docType)
   // console.log('data', pageData)
 
   return {
     props: {
       preview,
       data: {
+        isArchivedFallback: false,
         query,
         queryParams,
         pageData,
-        docType,
         menuData,
       },
     },

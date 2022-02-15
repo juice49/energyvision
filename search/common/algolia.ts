@@ -37,11 +37,11 @@ export const updateSettings: UpdateSettingsType = (settings) => (index) =>
   )
 
 type UpdateType = (
-  indexName: string,
-) => (
   indexSettings: Settings,
+) => (
+  indexName: string,
 ) => (mappedData: Readonly<Record<string, string>>[]) => TE.TaskEither<string | Error, string>
-export const update: UpdateType = (indexName) => (indexSettings) => (mappedData: Readonly<Record<string, string>>[]) =>
+export const update: UpdateType = (indexSettings) => (indexName) => (mappedData: Readonly<Record<string, string>>[]) =>
   pipe(
     init(indexName),
     TE.fromEither,

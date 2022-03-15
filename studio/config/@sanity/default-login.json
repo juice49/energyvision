@@ -1,7 +1,7 @@
 {
   "providers": {
-    "mode": "replace",
-    "redirectOnSingle": true,
+    "mode": "append",
+    "redirectOnSingle": false,
     "entries": [
       {
         "name": "saml",

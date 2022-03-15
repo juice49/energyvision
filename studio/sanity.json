@@ -1,11 +1,11 @@
 {
   "root": true,
+  "api": {
+    "projectId": "xzxjix3c",
+    "dataset": "production"
+  },
   "project": {
     "name": "Equinor"
-  },
-  "api": {
-    "projectId": "h61q9gi9",
-    "dataset": "global"
   },
   "plugins": [
     "@sanity/base",
